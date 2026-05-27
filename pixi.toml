@@ -1,0 +1,23 @@
+[workspace]
+channels = ["conda-forge"]
+name = "conformerensemble"
+platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
+
+[dependencies]
+python = ">=3.11,<3.14"
+pip = ">=24,<25"
+numpy = ">=2,<3"
+pytest = ">=8,<9"
+ruff = ">=0.6,<1"
+maturin = ">=1.7,<2"
+
+[pypi-dependencies]
+ConformerEnsemble = { path = ".", editable = true }
+
+[tasks]
+install = "python -m pip install -e ."
+test-python = { cmd = "pytest tests/test_cli.py tests/test_filter_compat.py tests/test_wrapper_api.py", depends-on = ["install"] }
+test-rust = "cargo test"
+test = { cmd = "cargo test", depends-on = ["test-python"] }
+lint = "ruff check python tests"
+format = "ruff format python tests"

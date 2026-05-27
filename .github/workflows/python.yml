@@ -1,0 +1,113 @@
+name: Python CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ---------------------------------------------------------------------
+  # Build the maturin-backed wheel and run pytest against it.
+  # ---------------------------------------------------------------------
+  test:
+    name: py${{ matrix.python }} / ${{ matrix.os }} / ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+            target: aarch64-unknown-linux-gnu
+          - os: macos-13
+            arch: x86_64
+            target: x86_64-apple-darwin
+          - os: macos-14
+            arch: aarch64
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            arch: x86_64
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo registry / target
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: py-${{ matrix.target }}-${{ matrix.python }}
+
+      - name: Install build / test deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "maturin>=1.7,<2" pytest numpy
+
+      - name: Build & install wheel (in-place develop)
+        run: maturin develop --release --features python
+
+      - name: pytest
+        run: pytest tests -v
+
+  # ---------------------------------------------------------------------
+  # Build distributable wheels via maturin-action. Manylinux for x86_64
+  # and aarch64, plus native wheels for macOS and Windows.
+  # ---------------------------------------------------------------------
+  wheels:
+    name: wheels / ${{ matrix.os }} / ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            manylinux: auto
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            manylinux: auto
+          - os: macos-13
+            target: x86_64-apple-darwin
+            manylinux: ""
+          - os: macos-14
+            target: aarch64-apple-darwin
+            manylinux: ""
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            manylinux: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build wheel (abi3, manylinux=${{ matrix.manylinux || 'native' }})
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          args: --release --out dist --features python
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.target }}
+          path: dist/*.whl

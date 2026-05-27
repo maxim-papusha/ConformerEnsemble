@@ -1,0 +1,47 @@
+[package]
+name = "conformerensemblers"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.79"
+license = "MIT"
+description = "Core data structures (Geometry, ConformerEnsemble) for conformer ensemble manipulation."
+readme = "README.md"
+repository = "https://github.com/maxim-papusha/ConformerEnsemble"
+keywords = ["chemistry", "molecular", "conformer", "geometry"]
+categories = ["science"]
+
+[lib]
+# `rlib`   — keeps the crate usable from other Rust crates and tests/benches.
+# `cdylib` — needed for the maturin/PyO3 extension module wheel.
+crate-type = ["rlib", "cdylib"]
+
+[features]
+# The `python` feature enables the PyO3-based extension module
+# (`conformerensemblers`) built via maturin. It is off by default so plain
+# Rust consumers do not pull a Python build dependency.
+#
+# The `portable-simd` feature enables explicit `std::simd` kernels in
+# `rmsd_simd` / `drmsd_simd`, wrapped with `multiversion` for runtime CPU
+# dispatch. Requires a **nightly** rustc (uses `#![feature(portable_simd)]`).
+default = []
+python = ["dep:pyo3", "dep:numpy"]
+portable-simd = ["dep:multiversion"]
+
+[dependencies]
+ndarray = "0.16"
+rayon = "1.10"
+thiserror = "2"
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py311"], optional = true }
+numpy = { version = "0.22", optional = true }
+multiversion = { version = "0.8", optional = true }
+
+[dev-dependencies]
+approx = "0.5"
+
+[[bench]]
+name = "rmsd_bench"
+harness = false
+
+[[bench]]
+name = "drmsd_bench"
+harness = false

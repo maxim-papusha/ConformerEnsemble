@@ -1,0 +1,56 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "ConformerEnsemble"
+version = "0.1.0a0"
+description = "Rust-backed conformer ensemble package with Python bindings and a unified CLI."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Maxim Papusha" }]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+dependencies = [
+    "numpy>=2,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+    "ruff>=0.6",
+]
+
+[project.urls]
+Repository = "https://github.com/maxim-papusha/ConformerEnsemble"
+
+[project.scripts]
+crest-filter = "conformerensemble.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.lint]
+select = ["E", "F", "UP035", "W291", "F541"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.maturin]
+features = ["python"]
+python-source = "python"
+module-name = "conformerensemblers.conformerensemblers"

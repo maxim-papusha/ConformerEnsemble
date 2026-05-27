@@ -1,0 +1,106 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  # ---------------------------------------------------------------------
+  # Stable Rust — scalar build, formatting, clippy on native runners.
+  # ---------------------------------------------------------------------
+  stable:
+    name: stable / ${{ matrix.os }} / ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+            target: aarch64-unknown-linux-gnu
+          - os: macos-13
+            arch: x86_64
+            target: x86_64-apple-darwin
+          - os: macos-14
+            arch: aarch64
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            arch: x86_64
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry / target
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: cargo fmt --check
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy (scalar)
+        run: cargo clippy --no-default-features --all-targets -- -D warnings
+
+      - name: cargo test (scalar)
+        run: cargo test --no-default-features --tests
+
+      - name: cargo build (release, scalar)
+        run: cargo build --release --no-default-features
+
+  # ---------------------------------------------------------------------
+  # Nightly Rust — portable-simd feature (uses std::simd).
+  # ---------------------------------------------------------------------
+  nightly-simd:
+    name: nightly+portable-simd / ${{ matrix.os }} / ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+            target: aarch64-unknown-linux-gnu
+          - os: macos-14
+            arch: aarch64
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            arch: x86_64
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install nightly toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo registry / target
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: nightly-${{ matrix.target }}
+
+      - name: cargo test (portable-simd)
+        run: cargo test --features portable-simd --tests
+
+      - name: cargo build benches (portable-simd)
+        run: cargo build --benches --features portable-simd
