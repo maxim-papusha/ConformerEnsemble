@@ -2,17 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 from conformerensemble import ConformerEnsemble, Geometry, backend_name
-from conformerensemblepy import (
-    ConformerEnsemble as LegacyConformerEnsemble,
+from conformerensemble.conformerensemblers import (
+    ConformerEnsemble as RsConformerEnsemble,
 )
-from conformerensemblepy import (
-    Geometry as LegacyGeometry,
-)
-from conformerensemblepy import (
-    backend_name as legacy_backend_name,
-)
-from conformerensemblers import ConformerEnsemble as RSConformerEnsemble
-from conformerensemblers import Geometry as RSGeometry
+from conformerensemble.conformerensemblers import Geometry as RsGeometry
 
 
 def make_geometry(offset: float = 0.0) -> Geometry:
@@ -24,17 +17,11 @@ def make_geometry(offset: float = 0.0) -> Geometry:
 
 def test_backend_imports() -> None:
     assert backend_name() == "rust"
-    assert legacy_backend_name() == "rust"
 
 
 def test_canonical_types_point_to_rs() -> None:
-    assert Geometry is RSGeometry
-    assert ConformerEnsemble is RSConformerEnsemble
-
-
-def test_legacy_package_reexports_canonical_types() -> None:
-    assert LegacyGeometry is Geometry
-    assert LegacyConformerEnsemble is ConformerEnsemble
+    assert Geometry is RsGeometry
+    assert ConformerEnsemble is RsConformerEnsemble
 
 
 def test_sort_descending() -> None:

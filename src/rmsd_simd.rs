@@ -15,9 +15,9 @@
 //! benchmark to sweep the lane axis directly.
 //!
 //! Each kernel uses `chunks_exact(LANES)` over the SIMD body and a
-//! scalar tail loop over the remainder — there is **no indexing inside
-//! the hot loop**. Accumulation is done in `LANES` parallel `Simd<T,
-//! LANES>` lanes with a single `reduce_sum` at the end.
+//! scalar tail over the remainder. Accumulation is done in `LANES`
+//! parallel `Simd<T, LANES>` lanes with a single `reduce_sum` at the
+//! end.
 //!
 //! Runtime CPU dispatch is performed via the `multiversion` crate so
 //! the same binary picks AVX-512 / AVX2+FMA / NEON or scalar fallback
@@ -27,8 +27,8 @@
 
 use core::simd::num::SimdFloat;
 use core::simd::{Simd, SimdElement};
-use std::simd::StdFloat;
 use multiversion::multiversion;
+use std::simd::StdFloat;
 
 use crate::rmsd::QcpFloat;
 
@@ -76,9 +76,6 @@ where
     let mut rz_iter = rz.chunks_exact(LANES);
 
     loop {
-        // Pull one chunk from each. All iterators advance in lockstep;
-        // we exit as soon as the first one is exhausted, since the
-        // slices are equal-length.
         let (cx_l, cy_l, cz_l, cx_r, cy_r, cz_r) = match (
             lx_iter.next(),
             ly_iter.next(),
@@ -109,7 +106,6 @@ where
         szz = az.mul_add(bz, szz);
     }
 
-    // Scalar tail.
     let tail_lx = lx_iter.remainder();
     let tail_ly = ly_iter.remainder();
     let tail_lz = lz_iter.remainder();
@@ -168,6 +164,9 @@ where
     Simd<T, LANES>: StdFloat,
     Simd<T, LANES>: SimdFloat<Scalar = T>,
 {
+    debug_assert_eq!(x.len(), y.len());
+    debug_assert_eq!(x.len(), z.len());
+
     let zero = Simd::<T, LANES>::splat(T::ZERO);
     let mut acc = zero;
     let mut x_iter = x.chunks_exact(LANES);
@@ -258,13 +257,10 @@ define_kernels!(f32, cross_cov_soa_f32_x64, squared_norm_soa_f32_x64, 64);
 // ---------------------------------------------------------------------------
 // Public dispatch entry points (called from rmsd.rs).
 //
-// Defaults picked from the lane-sweep on AVX2+FMA / AVX-512:
-//   - f64: 4 lanes (AVX2 = 256-bit / 64-bit = 4)
-//   - f32: 8 lanes (AVX2 = 256-bit / 32-bit = 8)
-// On AVX-512 hosts the multiversion dispatcher routes the same Rust-level
-// 4×f64 / 8×f32 call into the 256-bit-emitting codegen unit; the wider
-// kernels are intentionally also exposed so the benchmark can quantify
-// whether 8×f64 / 16×f32 (zmm) actually pays off.
+// Defaults picked from the 2026-05-27 lane sweep on AVX2+FMA:
+//   - f64: 8 lanes across the measured range.
+//   - f32: 8 lanes for small systems, 16 lanes once N >= 256.
+// The wider kernels remain public for benchmarking and AVX-512 hosts.
 // ---------------------------------------------------------------------------
 
 #[inline]
@@ -276,12 +272,12 @@ pub(crate) fn cross_cov_soa_f64(
     ry: &[f64],
     rz: &[f64],
 ) -> [f64; 9] {
-    cross_cov_soa_f64_x4(lx, ly, lz, rx, ry, rz)
+    cross_cov_soa_f64_x8(lx, ly, lz, rx, ry, rz)
 }
 
 #[inline]
 pub(crate) fn squared_norm_soa_f64(x: &[f64], y: &[f64], z: &[f64]) -> f64 {
-    squared_norm_soa_f64_x4(x, y, z)
+    squared_norm_soa_f64_x8(x, y, z)
 }
 
 #[inline]
@@ -293,10 +289,18 @@ pub(crate) fn cross_cov_soa_f32(
     ry: &[f32],
     rz: &[f32],
 ) -> [f32; 9] {
-    cross_cov_soa_f32_x8(lx, ly, lz, rx, ry, rz)
+    if lx.len() >= 256 {
+        cross_cov_soa_f32_x16(lx, ly, lz, rx, ry, rz)
+    } else {
+        cross_cov_soa_f32_x8(lx, ly, lz, rx, ry, rz)
+    }
 }
 
 #[inline]
 pub(crate) fn squared_norm_soa_f32(x: &[f32], y: &[f32], z: &[f32]) -> f32 {
-    squared_norm_soa_f32_x8(x, y, z)
+    if x.len() >= 256 {
+        squared_norm_soa_f32_x16(x, y, z)
+    } else {
+        squared_norm_soa_f32_x8(x, y, z)
+    }
 }

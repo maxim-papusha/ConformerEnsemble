@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from conformerensemblers import (
+from .conformerensemblers import (
     ConfDiffOptions,
     ConfFilterOptions,
     ConformerEnsemble,
     GeoConfDiffOptions,
     Geometry,
 )
-from conformerensemblers import (
+from .conformerensemblers import (
     backend_name as _backend_name,
 )
 

@@ -17,8 +17,8 @@ crate-type = ["rlib", "cdylib"]
 
 [features]
 # The `python` feature enables the PyO3-based extension module
-# (`conformerensemblers`) built via maturin. It is off by default so plain
-# Rust consumers do not pull a Python build dependency.
+# (`conformerensemble.conformerensemblers`) built via maturin. It is off by
+# default so plain Rust consumers do not pull a Python build dependency.
 #
 # The `portable-simd` feature enables explicit `std::simd` kernels in
 # `rmsd_simd` / `drmsd_simd`, wrapped with `multiversion` for runtime CPU

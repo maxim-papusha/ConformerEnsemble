@@ -53,4 +53,4 @@ docstring-code-format = true
 [tool.maturin]
 features = ["python"]
 python-source = "python"
-module-name = "conformerensemblers.conformerensemblers"
+module-name = "conformerensemble.conformerensemblers"

@@ -5,15 +5,13 @@ PyO3 bindings, Python API, tests, and CLI for conformer ensemble work.
 
 The merged layout keeps the Rust crate as the implementation root and ships a
 canonical Python package, `conformerensemble`, from the same maturin build.
-For compatibility, the distribution still exposes `conformerensemblers` as the
-extension package and `conformerensemblepy` as a thin Python shim.
+The compiled Rust extension lives under that package as an internal module,
+so user code only needs to import `conformerensemble`.
 
 ## What is in this folder
 
 - `src/`: Rust library and PyO3 bindings.
 - `python/conformerensemble/`: canonical Python API and `crest-filter` CLI.
-- `python/conformerensemblepy/`: compatibility re-exports for the old wrapper
-  import path.
 - `tests/`: Rust integration tests plus Python API and CLI tests.
 
 ## Python usage
